@@ -296,18 +296,18 @@ paths:
 	require.True(t, ok)
 	mediaType, ok = response.Content.Get("application/octet-stream")
 	require.True(t, ok)
+	// TODO: this is not passing. I'm verifying in the OpenAPI community if we epect it to NOT be removed (because its not a file upload) or if we expect it to be removed because it is a general update relevant to JSON Schema.
 	// assert.NotNil(t, mediaType.Schema, "Schema should not be removed for GET responses")
 
 	// Check PUT request (should keep schema)
-	// putPath, ok := model.Model.Paths.PathItems.Get("/put-binary")
-	// require.True(t, ok)
-	// put := putPath.Put
-	// require.NotNil(t, put)
-	// mediaType, ok = put.RequestBody.Content.Get("application/octet-stream")
-	// require.True(t, ok)
+	putPath, ok := model.Model.Paths.PathItems.Get("/put-binary")
+	require.True(t, ok)
+	put = putPath.Put
+	require.NotNil(t, put)
+	mediaType, ok = put.RequestBody.Content.Get("application/octet-stream")
+	require.True(t, ok)
+	// TODO: this is not passing. I'm verifying in the OpenAPI community if we epect it to NOT be removed (because its not a file upload) or if we expect it to be removed because it is a general update relevant to JSON Schema.
 	// assert.NotNil(t, mediaType.Schema, "Schema should not be removed for PUT requests")
-	// fmt.Println("md ce", mediaType.Schema.Schema().GoLow().ContentEncoding.Value)
-
 }
 
 func TestConverter_ConvertV3ToV31_SchemaConversion(t *testing.T) {
