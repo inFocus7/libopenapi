@@ -95,7 +95,7 @@ components:
 	model, errs := (*result).BuildV3Model()
 	require.Empty(t, errs)
 
-	// check simply that examples is set with the correct value
+	// check that examples is set with the correct value
 	testSchema, ok := model.Model.Components.Schemas.Get("Test")
 	require.True(t, ok)
 	require.NotNil(t, testSchema)

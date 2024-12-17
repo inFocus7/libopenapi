@@ -212,9 +212,6 @@ func convertSchema(schemaProxy *v3base.SchemaProxy) error {
 			// Convert base64/byte format to contentEncoding
 			schema.ContentEncoding = "base64"
 			schema.Format = ""
-
-			b, _ := schema.Render()
-			fmt.Println("schema\n", string(b))
 		case "binary":
 			// Only convert binary format to contentMediaType if it's a property
 			schema.ContentMediaType = "application/octet-stream"
@@ -295,7 +292,7 @@ func convertPathItemSchemas(pathItem *v3.PathItem) error {
 			continue
 		}
 
-		// Convert request body schema (only for uploads)
+		// Convert request body schema
 		if op.RequestBody != nil && op.RequestBody.Content != nil {
 			for _, mediaType := range op.RequestBody.Content.FromOldest() {
 				if err := convertMediaType(mediaType); err != nil {
@@ -328,7 +325,7 @@ func convertPathItemSchemas(pathItem *v3.PathItem) error {
 			}
 		}
 
-		// Convert parameter schemas
+		// Convert parameters
 		if op.Parameters != nil {
 			for _, param := range op.Parameters {
 				if param.Schema != nil {
