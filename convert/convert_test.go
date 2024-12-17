@@ -1,7 +1,6 @@
 package convert
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/pb33f/libopenapi"
@@ -251,8 +250,7 @@ paths:
 	require.True(t, ok)
 	assert.NotNil(t, mediaType.Schema, "Schema should not be removed for POST base64 uploads")
 	assert.Empty(t, mediaType.Schema.Schema().Format)
-	// assert.Equal(t, "base64", mediaType.Schema.Schema().GoLow().ContentEncoding.Value) // TODO: this is not working, why? something to do with low/high conversion?
-	fmt.Println("md ce", mediaType.Schema.Schema().GoLow().ContentEncoding) // why is this nil?
+	assert.Equal(t, "base64", mediaType.Schema.Schema().ContentEncoding)
 
 	// Check PUT base64 upload (should keep schema and set contentEncoding)
 	base64UpdatePath, ok := model.Model.Paths.PathItems.Get("/update-base64")
@@ -262,7 +260,7 @@ paths:
 	mediaType, ok = put.RequestBody.Content.Get("application/octet-stream")
 	require.True(t, ok)
 	assert.NotNil(t, mediaType.Schema, "Schema should not be removed for PUT base64 uploads")
-	// assert.Equal(t, "base64", mediaType.Schema.Schema().GoLow().ContentEncoding.Value)
+	assert.Equal(t, "base64", mediaType.Schema.Schema().ContentEncoding)
 
 	// Check multipart form data (properties should be converted appropriately)
 	multipartPath, ok := model.Model.Paths.PathItems.Get("/upload-multipart")
@@ -278,11 +276,11 @@ paths:
 	assert.Equal(t, []string{"integer"}, orderIdProp.Schema().Type)
 	binaryFileProp, ok := schema.Properties.Get("binaryFile")
 	require.True(t, ok)
-	// assert.Equal(t, "application/octet-stream", binaryFileProp.Schema().GoLow().ContentMediaType.Value, "Binary file property should use contentMediaType")
+	assert.Equal(t, "application/octet-stream", binaryFileProp.Schema().ContentMediaType, "Binary file property should use contentMediaType")
 	assert.Empty(t, binaryFileProp.Schema().Format)
 	base64FileProp, ok := schema.Properties.Get("base64File")
 	require.True(t, ok)
-	// assert.Equal(t, "base64", base64FileProp.Schema().GoLow().ContentEncoding.Value, "Base64 file property should use contentEncoding")
+	assert.Equal(t, "base64", base64FileProp.Schema().ContentEncoding, "Base64 file property should use contentEncoding")
 	assert.Empty(t, base64FileProp.Schema().Format)
 	normalProp, ok := schema.Properties.Get("normalField")
 	require.True(t, ok)

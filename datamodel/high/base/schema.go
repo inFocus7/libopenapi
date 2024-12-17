@@ -94,6 +94,8 @@ type Schema struct {
 	Enum                 []*yaml.Node                          `json:"enum,omitempty" yaml:"enum,omitempty"`
 	AdditionalProperties *DynamicValue[*SchemaProxy, bool]     `json:"additionalProperties,renderZero,omitempty" yaml:"additionalProperties,renderZero,omitempty"`
 	Description          string                                `json:"description,omitempty" yaml:"description,omitempty"`
+	ContentEncoding      string                                `json:"contentEncoding,omitempty" yaml:"contentEncoding,omitempty"`
+	ContentMediaType     string                                `json:"contentMediaType,omitempty" yaml:"contentMediaType,omitempty"`
 	Default              *yaml.Node                            `json:"default,omitempty" yaml:"default,renderZero,omitempty"`
 	Const                *yaml.Node                            `json:"const,omitempty" yaml:"const,renderZero,omitempty"`
 	Nullable             *bool                                 `json:"nullable,omitempty" yaml:"nullable,omitempty"`
@@ -305,6 +307,12 @@ func NewSchema(schema *base.Schema) *Schema {
 
 	if !schema.Anchor.IsEmpty() {
 		s.Anchor = schema.Anchor.Value
+	}
+	if !schema.ContentEncoding.IsEmpty() {
+		s.ContentEncoding = schema.ContentEncoding.Value
+	}
+	if !schema.ContentMediaType.IsEmpty() {
+		s.ContentMediaType = schema.ContentMediaType.Value
 	}
 
 	var enum []*yaml.Node

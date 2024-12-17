@@ -7,7 +7,6 @@ import (
 	"github.com/pb33f/libopenapi"
 	v3base "github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	low "github.com/pb33f/libopenapi/datamodel/low"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"gopkg.in/yaml.v3"
 )
@@ -211,34 +210,14 @@ func convertSchema(schemaProxy *v3base.SchemaProxy) error {
 		switch schema.Format {
 		case "base64", "byte":
 			// Convert base64/byte format to contentEncoding
-			// TODO: for some reason in test when i check this, it's nil. not sure if checking wrong, or maybe not 'properly' setting this, so it is rendered as nil..
-			schema.GoLow().ContentEncoding = low.NodeReference[string]{
-				Value: "base64",
-				KeyNode: &yaml.Node{
-					Kind:  yaml.ScalarNode,
-					Value: "contentEncoding",
-				},
-				ValueNode: &yaml.Node{
-					Kind:  yaml.ScalarNode,
-					Value: "base64",
-				},
-			}
+			schema.ContentEncoding = "base64"
 			schema.Format = ""
+
+			b, _ := schema.Render()
+			fmt.Println("schema\n", string(b))
 		case "binary":
 			// Only convert binary format to contentMediaType if it's a property
-			// (like in multipart/form-data). For direct file uploads, the schema
-			// will be removed at the MediaType level
-			schema.GoLow().ContentMediaType = low.NodeReference[string]{
-				Value: "application/octet-stream",
-				KeyNode: &yaml.Node{
-					Kind:  yaml.ScalarNode,
-					Value: "contentMediaType",
-				},
-				ValueNode: &yaml.Node{
-					Kind:  yaml.ScalarNode,
-					Value: "application/octet-stream",
-				},
-			}
+			schema.ContentMediaType = "application/octet-stream"
 			schema.Format = ""
 		}
 	}
