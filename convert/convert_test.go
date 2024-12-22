@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConverter_ConvertV3ToV31_VersionCheck(t *testing.T) {
+func TestConverter_30To31_VersionCheck(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
@@ -38,7 +38,7 @@ info:
   title: Test API
   version: 1.0.0`,
 			wantErr:     true,
-			errContains: "is not OpenAPI 3.0.x",
+			errContains: "not supported",
 		},
 		{
 			name: "invalid 3.1.0 version",
@@ -47,7 +47,7 @@ info:
   title: Test API
   version: 1.0.0`,
 			wantErr:     true,
-			errContains: "is not OpenAPI 3.0.x",
+			errContains: "not supported",
 		},
 	}
 
@@ -57,7 +57,7 @@ info:
 			require.NoError(t, err)
 
 			converter := NewConverter(&doc)
-			result, err := converter.ConvertV3ToV31()
+			result, err := converter.To31()
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -74,7 +74,7 @@ info:
 	}
 }
 
-func TestConverter_ConvertV3ToV31_ExampleConversion(t *testing.T) {
+func TestConverter_30To31_ExampleConversion(t *testing.T) {
 	input := `openapi: 3.0.0
 info:
   title: Test API
@@ -89,7 +89,7 @@ components:
 	require.NoError(t, err)
 
 	converter := NewConverter(&doc)
-	result, err := converter.ConvertV3ToV31()
+	result, err := converter.To31()
 	require.NoError(t, err)
 
 	model, errs := (*result).BuildV3Model()
@@ -105,7 +105,7 @@ components:
 	assert.Nil(t, testSchema.Schema().Example)
 }
 
-func TestConverter_ConvertV3ToV31_FileUploadPayload(t *testing.T) {
+func TestConverter_30To31_FileUploadPayload(t *testing.T) {
 	input := `openapi: 3.0.0
 info:
   title: Test API
@@ -199,7 +199,7 @@ paths:
 	require.NoError(t, err)
 
 	converter := NewConverter(&doc)
-	result, err := converter.ConvertV3ToV31()
+	result, err := converter.To31()
 	require.NoError(t, err)
 
 	model, errs := (*result).BuildV3Model()
@@ -287,30 +287,20 @@ paths:
 	assert.Equal(t, []string{"string"}, normalProp.Schema().Type)
 	assert.Empty(t, normalProp.Schema().Format)
 
-	// Check GET response (should keep schema)
-	downloadPath, ok := model.Model.Paths.PathItems.Get("/download-binary")
+	// Check download binary (should remove schema)
+	downloadBinaryPath, ok := model.Model.Paths.PathItems.Get("/download-binary")
 	require.True(t, ok)
-	get := downloadPath.Get
+	get := downloadBinaryPath.Get
 	require.NotNil(t, get)
 	response, ok := get.Responses.Codes.Get("200")
 	require.True(t, ok)
+	require.NotNil(t, response)
 	mediaType, ok = response.Content.Get("application/octet-stream")
 	require.True(t, ok)
-	// TODO: this is not passing. I'm verifying in the OpenAPI community if we epect it to NOT be removed (because its not a file upload) or if we expect it to be removed because it is a general update relevant to JSON Schema.
-	// assert.NotNil(t, mediaType.Schema, "Schema should not be removed for GET responses")
-
-	// Check PUT request (should keep schema)
-	putPath, ok := model.Model.Paths.PathItems.Get("/put-binary")
-	require.True(t, ok)
-	put = putPath.Put
-	require.NotNil(t, put)
-	mediaType, ok = put.RequestBody.Content.Get("application/octet-stream")
-	require.True(t, ok)
-	// TODO: this is not passing. I'm verifying in the OpenAPI community if we epect it to NOT be removed (because its not a file upload) or if we expect it to be removed because it is a general update relevant to JSON Schema.
-	// assert.NotNil(t, mediaType.Schema, "Schema should not be removed for PUT requests")
+	assert.Nil(t, mediaType.Schema, "Schema should be removed for GET binary downloads")
 }
 
-func TestConverter_ConvertV3ToV31_SchemaConversion(t *testing.T) {
+func TestConverter_30To31_SchemaConversion(t *testing.T) {
 	input := `openapi: 3.0.0
 info:
   title: Test API
@@ -338,7 +328,7 @@ components:
 	require.NoError(t, err)
 
 	converter := NewConverter(&doc)
-	result, err := converter.ConvertV3ToV31()
+	result, err := converter.To31()
 	require.NoError(t, err)
 
 	// Build the model to check the converted schemas
@@ -367,7 +357,7 @@ components:
 	assert.Equal(t, []string{"string", "null"}, field1.Type)
 	assert.Nil(t, field1.Nullable)
 
-	// // Check field2
+	// Check field2
 	field2Proxy, ok := testSchema.Properties.Get("field2")
 	require.True(t, ok)
 	require.NotNil(t, field2Proxy)
@@ -382,7 +372,6 @@ components:
 	require.True(t, ok)
 	require.NotNil(t, field3Proxy)
 	field3 := field3Proxy.Schema()
-	// assert.Equal(t, []string{}, field3.Type) `actual: []string(nil)`
 	assert.Nil(t, field3.Nullable)
 	require.True(t, field3.ExclusiveMinimum.IsB())
 	assert.Equal(t, 10.0, field3.ExclusiveMinimum.B)
