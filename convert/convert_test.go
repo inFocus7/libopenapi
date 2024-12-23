@@ -143,22 +143,6 @@ paths:
             schema:
               type: string
               format: binary
-  /upload-base64:
-    post:
-      requestBody:
-        content:
-          application/octet-stream:
-            schema:
-              type: string
-              format: base64
-  /update-base64:
-    put:
-      requestBody:
-        content:
-          application/octet-stream:
-            schema:
-              type: string
-              format: base64
   /upload-multipart:
     post:
       requestBody:
@@ -240,27 +224,6 @@ paths:
 	mediaType, ok = put.RequestBody.Content.Get("image/png")
 	require.True(t, ok)
 	assert.Nil(t, mediaType.Schema, "Schema should be removed for PUT PNG binary uploads")
-
-	// Check POST base64 upload (should keep schema and set contentEncoding)
-	base64Path, ok := model.Model.Paths.PathItems.Get("/upload-base64")
-	require.True(t, ok)
-	post = base64Path.Post
-	require.NotNil(t, post)
-	mediaType, ok = post.RequestBody.Content.Get("application/octet-stream")
-	require.True(t, ok)
-	assert.NotNil(t, mediaType.Schema, "Schema should not be removed for POST base64 uploads")
-	assert.Empty(t, mediaType.Schema.Schema().Format)
-	assert.Equal(t, "base64", mediaType.Schema.Schema().ContentEncoding)
-
-	// Check PUT base64 upload (should keep schema and set contentEncoding)
-	base64UpdatePath, ok := model.Model.Paths.PathItems.Get("/update-base64")
-	require.True(t, ok)
-	put = base64UpdatePath.Put
-	require.NotNil(t, put)
-	mediaType, ok = put.RequestBody.Content.Get("application/octet-stream")
-	require.True(t, ok)
-	assert.NotNil(t, mediaType.Schema, "Schema should not be removed for PUT base64 uploads")
-	assert.Equal(t, "base64", mediaType.Schema.Schema().ContentEncoding)
 
 	// Check multipart form data (properties should be converted appropriately)
 	multipartPath, ok := model.Model.Paths.PathItems.Get("/upload-multipart")

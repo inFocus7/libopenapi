@@ -2,6 +2,7 @@ package to31
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pb33f/libopenapi/convert/utils"
 	v3base "github.com/pb33f/libopenapi/datamodel/high/base"
@@ -89,14 +90,16 @@ func convertSchema(schemaProxy *v3base.SchemaProxy) error {
 		}
 	}
 
-	// Handle file upload formats
+	// Handle file upload formats for encoded binary (in text formats)
+	// TODO: check if this is correct, OR if i should follow 'working with binary data'?
+	// Need to figure out the difference between this data & the one when converting media. ex. does this one know the type (raw / non-raw)? or is this different?
 	if len(schema.Type) == 1 && schema.Type[0] == "string" {
 		switch schema.Format {
-		case "base64", "byte":
-			schema.ContentEncoding = "base64"
-			schema.Format = ""
 		case "binary":
 			schema.ContentMediaType = "application/octet-stream"
+			schema.Format = ""
+		case "byte", "base64":
+			schema.ContentEncoding = "base64"
 			schema.Format = ""
 		}
 	}
@@ -127,23 +130,41 @@ func convertSchema(schemaProxy *v3base.SchemaProxy) error {
 	return nil
 }
 
+// isRawBinaryMediaType checks if the media type can handle raw binary data
+func isRawBinaryMediaType(mediaType string) bool {
+	return mediaType == "application/octet-stream" ||
+		strings.HasPrefix(mediaType, "image/") ||
+		strings.HasPrefix(mediaType, "audio/") ||
+		strings.HasPrefix(mediaType, "video/") ||
+		strings.HasPrefix(mediaType, "font/") ||
+		strings.HasPrefix(mediaType, "model/")
+}
+
 // convertMediaType converts a media type object from 3.0 to 3.1 format
-func convertMediaType(mediaType *v3.MediaType) error {
-	if mediaType == nil {
+func convertMediaType(mediaType *v3.MediaType, mediaTypeName string) error {
+	if mediaType == nil || mediaType.Schema == nil {
 		return nil
 	}
 
-	// For binary file upload in request body, remove schema entirely
-	if mediaType.Schema != nil && mediaType.Schema.Schema().Format == "binary" {
+	schema := mediaType.Schema.Schema()
+
+	// First check if this is binary data at all
+	isBinaryFormat := len(schema.Type) == 1 &&
+		schema.Type[0] == "string" &&
+		(schema.Format == "binary" || schema.Format == "byte")
+
+	if !isBinaryFormat {
+		return convertSchema(mediaType.Schema)
+	}
+
+	// Then handle based on media type
+	if isRawBinaryMediaType(mediaTypeName) {
 		mediaType.Schema = nil
-		return nil
-	}
-
-	// For other cases, convert the schema
-	if mediaType.Schema != nil {
-		if err := convertSchema(mediaType.Schema); err != nil {
-			return err
-		}
+	} else {
+		schema.Type = []string{"string"}
+		// Note: contentMediaType is based on the media type name, so we don't need to set it as it's already defined.
+		schema.ContentEncoding = "base64"
+		schema.Format = ""
 	}
 
 	return nil
@@ -173,8 +194,8 @@ func convertPathItemSchemas(pathItem *v3.PathItem) error {
 
 		// Convert request body schema
 		if op.RequestBody != nil && op.RequestBody.Content != nil {
-			for _, mediaType := range op.RequestBody.Content.FromOldest() {
-				if err := convertMediaType(mediaType); err != nil {
+			for key, mediaType := range op.RequestBody.Content.FromOldest() {
+				if err := convertMediaType(mediaType, key); err != nil {
 					return err
 				}
 			}
@@ -184,8 +205,8 @@ func convertPathItemSchemas(pathItem *v3.PathItem) error {
 		if op.Responses != nil {
 			// Convert default response
 			if op.Responses.Default != nil && op.Responses.Default.Content != nil {
-				for _, mediaType := range op.Responses.Default.Content.FromOldest() {
-					if err := convertMediaType(mediaType); err != nil {
+				for key, mediaType := range op.Responses.Default.Content.FromOldest() {
+					if err := convertMediaType(mediaType, key); err != nil {
 						return err
 					}
 				}
@@ -195,8 +216,8 @@ func convertPathItemSchemas(pathItem *v3.PathItem) error {
 			for pair := op.Responses.Codes.First(); pair != nil; pair = pair.Next() {
 				response := pair.Value()
 				if response != nil && response.Content != nil {
-					for _, mediaType := range response.Content.FromOldest() {
-						if err := convertMediaType(mediaType); err != nil {
+					for key, mediaType := range response.Content.FromOldest() {
+						if err := convertMediaType(mediaType, key); err != nil {
 							return err
 						}
 					}
